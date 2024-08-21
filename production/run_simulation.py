@@ -1,8 +1,11 @@
 from production.mandelbrot_steps import mandelbrot, count_mandelbrot, draw_mandelbrot
-from jax import random, jit, vmap, lax
+from jax import jit, vmap, lax
 
 import jax
 import jax.numpy as jnp
+
+from random import SystemRandom
+
 
 # Utility functions
 from utils import (
@@ -15,16 +18,19 @@ from utils import (
 # Variables
 xmin, xmax = -2, 1
 ymin, ymax = -1.5, 1.5
-rng = random.PRNGKey(0)
-num_samples = 10000
+seed = SystemRandom().randint(0, 1000000000) 
+print(seed)
+MOTHERrng = jax.random.PRNGKey(seed)
+num_samples = 1000000
 num_x = 1000
 num_y = 1000
 
 pixels = draw_mandelbrot(num_x, num_y)
-
+keys = jax.random.split(MOTHERrng, 10)
 # Setze Parameter für die Monte-Carlo-Simulation
 print("Calculating the area of the Mandelbrot set...")
-inside_count, max_iter_count = count_mandelbrot(rng, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+#inside_count, max_iter_count = count_mandelbrot(keys[0], num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+inside_count, max_iter_count = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
 
 # Berücksichtige nur die Punkte, die nicht MAX_ITER erreicht haben
 valid_samples = num_samples - max_iter_count
@@ -47,7 +53,7 @@ regions = [
 
 for region in regions:
     numerator, max_iter_count = count_mandelbrot(
-        rng,
+        MOTHERrng,
         num_samples,
         region["xmin"],
         region["width"],
