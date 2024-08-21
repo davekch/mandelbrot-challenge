@@ -2,7 +2,7 @@ import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
 
-SAMPLES_IN_TILE = 100
+SAMPLES_IN_TILE = 1000
 
 
 @nb.jit
@@ -57,11 +57,6 @@ def find_edge_tiles(xmin, ymin, width, height, uncert_target, depth):
         tiles = [(xmin, xmin+width, ymin, ymin+height)]
     return tiles
 
-# Knill limits
-xmin, xmax = -2, 1
-ymin, ymax = 0, 3 / 2   # ymin = 0 because symmetry
-tiles = find_edge_tiles(xmin, ymin, xmax-xmin, ymax-ymin, 1, 5)
-print(tiles)
 
 @nb.jit(parallel=True)
 def draw_mandelbrot(num_x, num_y):
@@ -92,18 +87,18 @@ def plot_pixels(pixels, figsize=(7, 7), dpi=300, extend=[-2, 1, -3 / 2, 3 / 2]):
 
     return fig, ax, p
 
-print("########################################################")
-print("Generating Mandelbrot set for (1000,1000) pixel array")
-print("########################################################")
-pixels = draw_mandelbrot(1000, 1000)
 
-"""
-Plot Mandelbrot pixels
-"""
+if __name__ == "__main__":
+    # Knill limits
+    xmin, xmax = -2, 1
+    ymin, ymax = 0, 3 / 2   # ymin = 0 because symmetry
+    tiles = find_edge_tiles(xmin, ymin, (xmax-xmin)/2, ymax-ymin, 1, 6)
+    tiles += find_edge_tiles(xmin + (xmax-xmin)/2, ymin, (xmax-xmin)/2, ymax-ymin, 1, 6)
+    print(f"number of tiles: {len(tiles)}")
 
-fig, ax, _ = plot_pixels(pixels)
+    pixels = draw_mandelbrot(1000, 1000)
+    fig, ax, _ = plot_pixels(pixels)
 
-# add tile ractangles to plot
-for tile in tiles:
-    ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor='red'))
-    
+    # add tile ractangles to plot
+    for tile in tiles:
+        ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor='red'))
