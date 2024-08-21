@@ -1,44 +1,66 @@
 from production.mandelbrot_steps import mandelbrot, count_mandelbrot, draw_mandelbrot
-from jax import jit, vmap, lax
 
+import argparse
 import jax
-import jax.numpy as jnp
+import numpy as np
+import os
 
 from random import SystemRandom
 
 
-# Utility functions
-from utils import (
-    combine_uncertainties,
-    plot_pixels,
-    confidence_interval,
-    wald_uncertainty,
-)
+def main():
+    parser = argparse.ArgumentParser(description="Calculate the area of the Mandelbrot set.")
+    parser.add_argument("--xmin", type=float, help="Minimum x-value of the region")
+    parser.add_argument("--xmax", type=float, help="Maximum x-value of the region")
+    parser.add_argument("--ymin", type=float, help="Minimum y-value of the region")
+    parser.add_argument("--ymax", type=float, help="Maximum y-value of the region")
+    parser.add_argument("--num-samples", type=int, help="Number of samples to use in the Monte Carlo simulation")
+    parser.add_argument("--num-batches", type=int, help="Number of pixels in the x-direction")
+    parser.add_argument("--out-directory", type=str, help="Output directory for the results.")
+    args = parser.parse_args()
 
-# Variables
-xmin, xmax = -2, 1
-ymin, ymax = -1.5, 1.5
-seed = SystemRandom().randint(0, 1000000000) 
-print(seed)
-MOTHERrng = jax.random.PRNGKey(seed)
-num_samples = 1000000
-num_x = 1000
-num_y = 1000
+    if args.out_directory is None:
+        args.out_directory = "results"
+    if not os.path.exists(args.out_directory):
+        os.makedirs(args.out_directory)
+    # Variables
+    xmin, xmax = args.xmin, args.xmax
+    ymin, ymax = args.ymin, args.ymax
+    assert(xmin < xmax)
+    assert(ymin < ymax)
+    num_samples = args.num_samples 
+    num_batches = args.num_batches
 
-pixels = draw_mandelbrot(num_x, num_y)
-keys = jax.random.split(MOTHERrng, 10)
-# Setze Parameter für die Monte-Carlo-Simulation
-print("Calculating the area of the Mandelbrot set...")
-#inside_count = count_mandelbrot(keys[0], num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
-inside_count  = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+    seed = SystemRandom().randint(0, 1000000000) 
+    print(f"Running with seed: {seed}")
 
-# Berücksichtige nur die Punkte, die nicht MAX_ITER erreicht haben
-valid_samples = num_samples
+    JAX_MOTHER_RNG_KEY = jax.random.PRNGKey(seed)
 
-# Berechnung der Fläche
-area = (inside_count / valid_samples) * (xmax - xmin) * (ymax - ymin)
-print(f"Area of the Mandelbrot set is {area}")
+    # ToDo: test if faster witht vmap
+    # I don't expect it to
+    #inside_count  = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
 
+    total_hits = 0
+    total_samples = 0
+
+    for i, random_key in enumerate(jax.random.split(JAX_MOTHER_RNG_KEY, num_batches)):
+        print(f"Starting run {i} with seed {random_key}")
+        inside_hits = count_mandelbrot(random_key, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+        total_hits += inside_hits
+        total_samples += num_samples
+
+    tile_size = (xmax - xmin) * (ymax - ymin) 
+    hit_precentage = total_hits / total_samples
+    area = hit_precentage * tile_size 
+    print(f"Area of the Mandelbrot set is {area}, with {hit_precentage:2.2f}% hits at {total_samples} samples")
+    result = np.array([tile_size, total_hits,total_samples])
+
+    out_path = os.path.join(args.out_directory, f"result_{seed}.npy")
+    np.save(out_path, result)
+
+if __name__ == "__main__":
+    main()
+"""
 # Zeichnen der Mandelbrotmenge für eine 1000x1000-Pixel-Darstellung
 pixels = draw_mandelbrot(num_x, num_y)
 fig, _, _ = plot_pixels(pixels)
@@ -50,10 +72,9 @@ regions = [
     {"xmin": -0.4, "ymin": 0.5, "width": 0.5, "height": 0.5},
     {"xmin": -0.4, "ymin": -0.25, "width": 0.5, "height": 0.5},
 ]
-
 for region in regions:
     numerator  = count_mandelbrot(
-        MOTHERrng,
+        JAX_MOTHER_RNG_KEY,
         num_samples,
         region["xmin"],
         region["width"],
@@ -94,4 +115,5 @@ final_uncertainty = combine_uncertainties(ci_low, ci_high, valid_samples)
 final_value = jnp.sum(numer / valid_samples) * width * height
 print(f"The total area of the Mandelbrot set is {final_value}")
 print(f"The uncertainty on the total area is {final_uncertainty}")
+"""
 

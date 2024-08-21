@@ -12,7 +12,7 @@ def mandelbrot(c):
         return  jnp.logical_not(diverged | converged)
 
     def body_fn(state):
-        z_tortoise, z_hare, iter_count, diverged, converged = state
+        z_tortoise, z_hare, diverged, converged = state
         z_tortoise = z_tortoise * z_tortoise + c
         z_hare = z_hare * z_hare + c
         z_hare = z_hare * z_hare + c  # Hare macht zwei Schritte
