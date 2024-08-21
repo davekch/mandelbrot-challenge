@@ -3,5 +3,5 @@
 
 Results:
 ```
-/home/NiclasEich/repos/mandelbrot-challenge
+/home/NiclasEich/repos/mandelbrot-challenge/results
 ```
