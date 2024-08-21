@@ -32,10 +32,8 @@ def mandelbrot(c):
     _, _, diverged, converged = final_state
     
     # Bestimme, ob der Punkt Teil der Mandelbrotmenge ist
-    in_set = jnp.logical_not(diverged) & converged # & (iter_count < MAX_ITER)
-    
-    # Rückgabe von `in_set` und ob der Punkt die maximale Iterationszahl erreicht hat
-    return in_set
+    return jnp.logical_not(diverged) & converged # & (iter_count < MAX_ITER)
+
 
 # Funktion zur Zählung von Punkten innerhalb der Mandelbrotmenge
 @partial(jit, static_argnames=["num_samples", "xmin", "width", "ymin", "height"])
@@ -46,13 +44,11 @@ def count_mandelbrot(rng, num_samples, xmin, width, ymin, height):
     y = ymin + y_norm * height
     c = x + 1j * y
     
-    results = vmap(lambda z: mandelbrot(z))(c)
+    results = vmap(mandelbrot)(c)
     in_set = results
     
     # Zählen der Punkte, die zur Mandelbrotmenge gehören
-    inside_count = jnp.sum(in_set)
-    
-    return inside_count
+    return jnp.sum(in_set)
 
 # Funktion zum Zeichnen der Mandelbrotmenge unter Verwendung von mandelbrot und count_mandelbrot
 @partial(jit, static_argnames=["num_x", "num_y"])
@@ -67,6 +63,4 @@ def draw_mandelbrot(num_x, num_y):
     c = xv + 1j * yv
     
     # Berechne die Mandelbrotmenge für jedes Pixel im Raster
-    pixels = vmap(vmap(lambda z: mandelbrot(z), in_axes=0), in_axes=0)(c)
-    
-    return pixels
+    return vmap(vmap(mandelbrot, in_axes=0), in_axes=0)(c)
