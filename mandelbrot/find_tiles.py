@@ -1,5 +1,6 @@
 import numpy as np
 import numba as nb
+import matplotlib.pyplot as plt
 
 SAMPLES_IN_TILE = 100
 
@@ -61,3 +62,48 @@ xmin, xmax = -2, 1
 ymin, ymax = 0, 3 / 2   # ymin = 0 because symmetry
 tiles = find_edge_tiles(xmin, ymin, xmax-xmin, ymax-ymin, 1, 5)
 print(tiles)
+
+@nb.jit(parallel=True)
+def draw_mandelbrot(num_x, num_y):
+    """Generate Mandelbrot set inside Knill limits"""
+    # Knill limits
+    xmin, xmax = -2, 1
+    ymin, ymax = -3 / 2, 3 / 2
+
+    # Generate empty pixel array with pixel size (dx,dy)
+    pixels = np.empty((num_x, num_y), np.int32)
+    dx = (xmax - xmin) / num_x
+    dy = (ymax - ymin) / num_y
+
+    # Fill pixels if pixel is in Mandelbrot set
+    for i in nb.prange(num_x):
+        for j in nb.prange(num_y):
+            x = xmin + i * dx
+            y = ymin + j * dy
+            pixels[j, i] = is_in_mandelbrot(x, y)  # function from above
+
+    return pixels
+
+def plot_pixels(pixels, figsize=(7, 7), dpi=300, extend=[-2, 1, -3 / 2, 3 / 2]):
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi, layout="constrained")
+    p = ax.imshow(pixels, extent=extend)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+
+    return fig, ax, p
+
+print("########################################################")
+print("Generating Mandelbrot set for (1000,1000) pixel array")
+print("########################################################")
+pixels = draw_mandelbrot(1000, 1000)
+
+"""
+Plot Mandelbrot pixels
+"""
+
+fig, ax, _ = plot_pixels(pixels)
+
+# add tile ractangles to plot
+for tile in tiles:
+    ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor='red'))
+    
