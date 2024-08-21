@@ -82,7 +82,7 @@ def draw_mandelbrot(num_x, num_y):
 
 def plot_pixels(pixels, figsize=(7, 7), dpi=300, extend=[-2, 1, -3 / 2, 3 / 2]):
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi, layout="constrained")
-    p = ax.imshow(pixels, extent=extend)
+    p = ax.imshow(pixels, extent=extend, cmap="Blues_r")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
 
@@ -101,8 +101,13 @@ if __name__ == "__main__":
     fig, ax, _ = plot_pixels(pixels)
 
     # add tile ractangles to plot
-    for tile in tiles:
-        ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor='red'))
+    for i, tile in enumerate(tiles):
+        color = "red"
+        ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor=color))
+        # plot tile index
+        ax.text(tile[0]+(tile[1]-tile[0])/2, tile[2]+(tile[3]-tile[2])/2, str(i), color="red", fontsize=3, ha="center", va="center")
+
+    fig.savefig("mandelbrot.pdf")
 
     """
     create a list of dicts with the tiles
