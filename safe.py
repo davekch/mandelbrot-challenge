@@ -10,8 +10,9 @@ import jax.numpy as jnp
 from random import SystemRandom
 from functools import partial
 
-#jax.config.update('jax_platform_name', 'cpu')
-print("Running on:\t", jax.devices())
+print("Runnign on CPU")
+jax.config.update('jax_platform_name', 'cpu')
+print(jax.devices())
 
 
 def main():
@@ -54,6 +55,10 @@ def main():
 
     JAX_MOTHER_RNG_KEY = jax.random.PRNGKey(seed)
 
+    # ToDo: test if faster witht vmap
+    # I don't expect it to
+    #inside_count  = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+
     total_hits = np.zeros(len(tiles))
     total_samples = np.zeros(len(tiles))
     tile_indices = np.arange(args.first_tile, args.last_tile+1)
@@ -82,8 +87,8 @@ def main():
     np.save(out_path, result)
 
 
-@partial(jax.jit, static_argnames=["num_samples"])
-def process_tile(random_key, tile_config, num_samples):
+#@partial(jax.jit, static_argnames=["tile_config", "random_key", "num_samples"])
+def process_tile(random_key, tile_config num_samples):
     inside_hits = count_mandelbrot(
         random_key, num_samples,
         tile_config[0],
@@ -93,9 +98,10 @@ def process_tile(random_key, tile_config, num_samples):
     )
     return inside_hits 
 
-@partial(jax.jit, static_argnames=["num_samples"])
+#@partial(jax.jit, static_argnames=["random_key","num_samples", "tiles"])
 def process_batch(random_keys, tile, num_samples):
-    hits =  jax.vmap(process_tile, in_axes=(0, None, None))(random_keys, tile, num_samples)
+    hits = []
+    hits =  jax.vmap(process_tile, in_axes=(0, None, None)(random_keys, tile, num_samples))
     return hits 
 
 def optimized_run(JAX_MOTHER_RNG_KEY, num_batches, tiles, num_samples):
@@ -105,10 +111,10 @@ def optimized_run(JAX_MOTHER_RNG_KEY, num_batches, tiles, num_samples):
     # Vectorize over all random keys (batches)
     batch_hits = []
     for tile in tiles:
-        batch_hits.append(process_batch(random_keys, tile, num_samples))
+        batch_hits = process_batch(random_keys, tile, num_samples)
 
     batch_hits = np.array(batch_hits)
-    batch_samples = num_samples * np.ones((len(tiles), num_batches))
+    batch_samples = num_samples * np.ones((num_batches, len(tiles)))
 
     # Initialize lists to store total hits and samples per tile_config
     total_hits_per_tile = []
@@ -116,8 +122,8 @@ def optimized_run(JAX_MOTHER_RNG_KEY, num_batches, tiles, num_samples):
 
     # Calculate total hits and samples per tile_config
     for i in range(len(tiles)):
-        total_hits = jnp.sum(batch_hits[i, :])
-        total_samples = jnp.sum(batch_samples[i, : ])
+        total_hits = jnp.sum(batch_hits[:, i])
+        total_samples = jnp.sum(batch_samples[:,i ])
         total_hits_per_tile.append(total_hits)
         total_samples_per_tile.append(total_samples)
 
@@ -181,4 +187,5 @@ final_value = jnp.sum(numer / valid_samples) * width * height
 print(f"The total area of the Mandelbrot set is {final_value}")
 print(f"The uncertainty on the total area is {final_uncertainty}")
 """
+
 
