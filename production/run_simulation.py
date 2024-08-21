@@ -29,11 +29,11 @@ pixels = draw_mandelbrot(num_x, num_y)
 keys = jax.random.split(MOTHERrng, 10)
 # Setze Parameter für die Monte-Carlo-Simulation
 print("Calculating the area of the Mandelbrot set...")
-#inside_count, max_iter_count = count_mandelbrot(keys[0], num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
-inside_count, max_iter_count = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+#inside_count = count_mandelbrot(keys[0], num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
+inside_count  = jax.vmap(count_mandelbrot, in_axes=[0, None,None,None,None,None, ])(keys, num_samples, xmin, xmax - xmin, ymin, ymax - ymin)
 
 # Berücksichtige nur die Punkte, die nicht MAX_ITER erreicht haben
-valid_samples = num_samples - max_iter_count
+valid_samples = num_samples
 
 # Berechnung der Fläche
 area = (inside_count / valid_samples) * (xmax - xmin) * (ymax - ymin)
@@ -52,7 +52,7 @@ regions = [
 ]
 
 for region in regions:
-    numerator, max_iter_count = count_mandelbrot(
+    numerator  = count_mandelbrot(
         MOTHERrng,
         num_samples,
         region["xmin"],
@@ -60,7 +60,7 @@ for region in regions:
         region["ymin"],
         region["height"],
     )
-    valid_samples = num_samples - max_iter_count
+    valid_samples = num_samples 
     ci = confidence_interval(
         0.05, numerator, valid_samples, region["width"] * region["height"]
     )
@@ -74,8 +74,8 @@ height = 3 / NUM_TILES_1D
 @jit
 def compute_tile(rng, j, i):
     denom = 100
-    numer, MAX_ITER_count = count_mandelbrot(rng, denom, xmin + j * width, width, ymin + i * height, height)
-    valid_samples = denom - MAX_ITER_count
+    numer  = count_mandelbrot(rng, denom, xmin + j * width, width, ymin + i * height, height)
+    valid_samples = denom
     return numer, valid_samples
 
 # Verteilte Berechnung über Tiles

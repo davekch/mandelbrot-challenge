@@ -3,13 +3,13 @@ import jax.numpy as jnp
 from functools import partial
 from jax import random, jit, vmap, lax
 
-MAX_ITER = 10000
+# MAX_ITER = 10000 not a good idea
 
 @partial(jit)
 def mandelbrot(c):
     def cond_fn(state):
-        z_tortoise, z_hare, iter_count, diverged, converged = state
-        return jnp.logical_and(iter_count < MAX_ITER, jnp.logical_not(diverged | converged))
+        z_tortoise, z_hare, diverged, converged = state
+        return  jnp.logical_not(diverged | converged)
 
     def body_fn(state):
         z_tortoise, z_hare, iter_count, diverged, converged = state
@@ -23,19 +23,19 @@ def mandelbrot(c):
         # Prüfen auf Zyklus (Tortoise-Hare-Vergleich)
         converged = jnp.isclose(z_tortoise, z_hare)
 
-        return z_tortoise, z_hare, iter_count + 1, diverged, converged
+        return z_tortoise, z_hare, diverged, converged
 
     z0 = jnp.zeros_like(c)
-    initial_state = (z0, z0, 0, False, False)
+    initial_state = (z0, z0, False, False)
     
     final_state = lax.while_loop(cond_fn, body_fn, initial_state)
-    _, _, iter_count, diverged, converged = final_state
+    _, _, diverged, converged = final_state
     
     # Bestimme, ob der Punkt Teil der Mandelbrotmenge ist
-    in_set = jnp.logical_not(diverged) & converged & (iter_count < MAX_ITER)
+    in_set = jnp.logical_not(diverged) & converged # & (iter_count < MAX_ITER)
     
     # Rückgabe von `in_set` und ob der Punkt die maximale Iterationszahl erreicht hat
-    return in_set, iter_count == MAX_ITER
+    return in_set
 
 # Funktion zur Zählung von Punkten innerhalb der Mandelbrotmenge
 @partial(jit, static_argnames=["num_samples", "xmin", "width", "ymin", "height"])
@@ -47,16 +47,12 @@ def count_mandelbrot(rng, num_samples, xmin, width, ymin, height):
     c = x + 1j * y
     
     results = vmap(lambda z: mandelbrot(z))(c)
-    in_set = results[0]
-    MAX_ITER_reached = results[1]
+    in_set = results
     
     # Zählen der Punkte, die zur Mandelbrotmenge gehören
     inside_count = jnp.sum(in_set)
     
-    # Zählen der Punkte, die die maximale Iterationszahl erreicht haben
-    MAX_ITER_count = jnp.sum(MAX_ITER_reached)
-    
-    return inside_count, MAX_ITER_count
+    return inside_count
 
 # Funktion zum Zeichnen der Mandelbrotmenge unter Verwendung von mandelbrot und count_mandelbrot
 @partial(jit, static_argnames=["num_x", "num_y"])
@@ -71,6 +67,6 @@ def draw_mandelbrot(num_x, num_y):
     c = xv + 1j * yv
     
     # Berechne die Mandelbrotmenge für jedes Pixel im Raster
-    pixels = vmap(vmap(lambda z: mandelbrot(z)[0], in_axes=0), in_axes=0)(c)
+    pixels = vmap(vmap(lambda z: mandelbrot(z), in_axes=0), in_axes=0)(c)
     
     return pixels
