@@ -36,8 +36,7 @@ def count_mandelbrot(rng, num_samples, xmin, width, ymin, height):
 
 
 def find_edge_tiles(xmin, ymin, width, height, uncert_target, depth):
-    """Compute area of each tile until uncert_target is reached.
-    The uncertainty is calculate with the Wald approximation in each tile.
+    """find tiles that contain the border of the mandelbrot set
     """
     rng = np.random.default_rng()
     # Sample SAMPLES_IN_BATCH more points until uncert_target is reached
@@ -49,10 +48,10 @@ def find_edge_tiles(xmin, ymin, width, height, uncert_target, depth):
     if numer > 0 and denom != numer and depth > 0:
         # split the tile
         tiles = []
-        tiles.append(find_edge_tiles(xmin,          ymin,          width/2, height/2, uncert_target, depth-1))
-        tiles.append(find_edge_tiles(xmin+width/2,  ymin,          width/2, height/2, uncert_target, depth-1))
-        tiles.append(find_edge_tiles(xmin,          ymin+height/2, width/2, height/2, uncert_target, depth-1))
-        tiles.append(find_edge_tiles(xmin+width/2,  ymin+height/2, width/2, height/2, uncert_target, depth-1))
+        tiles += find_edge_tiles(xmin,          ymin,          width/2, height/2, uncert_target, depth-1)
+        tiles += find_edge_tiles(xmin+width/2,  ymin,          width/2, height/2, uncert_target, depth-1)
+        tiles += find_edge_tiles(xmin,          ymin+height/2, width/2, height/2, uncert_target, depth-1)
+        tiles += find_edge_tiles(xmin+width/2,  ymin+height/2, width/2, height/2, uncert_target, depth-1)
     else:    
         tiles = [(xmin, xmin+width, ymin, ymin+height)]
     return tiles
