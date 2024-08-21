@@ -1,6 +1,7 @@
 import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
+import json
 
 SAMPLES_IN_TILE = 1000
 
@@ -102,3 +103,14 @@ if __name__ == "__main__":
     # add tile ractangles to plot
     for tile in tiles:
         ax.add_patch(plt.Rectangle((tile[0], tile[2]), tile[1]-tile[0], tile[3]-tile[2], fill=None, edgecolor='red'))
+
+    """
+    create a list of dicts with the tiles
+    """
+    tiles_list = []
+    for tile in tiles:
+        tiles_list.append({"xmin": tile[0], "xmax": tile[1], "ymin": tile[2], "ymax": tile[3]})
+    
+    #save to json
+    with open("tiles.json", "w") as f:
+        json.dump(tiles_list, f)
