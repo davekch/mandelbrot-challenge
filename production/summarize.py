@@ -1,5 +1,8 @@
 import numpy as np
 from scipy.stats import beta
+import json
+
+
 
 def confidence_interval(confidence_level, numerator, denominator, area):
     """Calculate confidence interval based on Clopper-Pearson.
@@ -29,9 +32,8 @@ def confidence_interval(confidence_level, numerator, denominator, area):
     return 0.5  * (high - low)
 
 
-def summarize(files, tiles):
-    tiles = {idx:{"total_hits":0, "total_samples":0, "tile_size":None, "uncertainty2":0} for idx in range(len(tiles))}
-    tile_size = 100
+def summarize(files, tiles_list):
+    tiles = {idx:{"total_hits":0, "total_samples":0, "tile_size":None, "uncertainty2":0} for idx in range(len(tiles_list))}
     confidence_level = 0.05
 
     for fname in files:
@@ -41,26 +43,27 @@ def summarize(files, tiles):
             idx = int(tile[0])
             tiles[idx]["total_hits"] += tile[1]
             tiles[idx]["total_samples"] += tile[2]
-            tiles[idx]["tile_size"] = tile_size
-
+            tiles[idx]["tile_size"] = (tiles_list[idx]["xmax"] - tiles_list[idx]["xmin"]) * (tiles_list[idx]["ymax"] - tiles_list[idx]["ymin"])
+            
             # area and uncertainty estimate of tile[idx]
-            area_i = tile[1]/tile[2] * tile_size
-            sigma_i = confidence_interval(confidence_level, tile[1], tile[2], tile_size)
+            area_i = tile[1]/tile[2] * tiles[idx]["tile_size"]
+            sigma_i = confidence_interval(confidence_level, tile[1], tile[2], tiles[idx]["tile_size"])
 
             # squared uncertainty
             tiles[idx]["uncertainty2"] += (sigma_i/area_i)**2
 
-    for k, tile in tiles.items():
-        print(k, tile)
-    areas = [tile["total_hits"]/tile["total_samples"]*tile["tile_size"] for k, tile in tiles.items()]
+    areas = [tile["total_hits"]/tile["total_samples"] * tile["tile_size"]  if tile["total_samples"] != 0 else 0 for k, tile in tiles.items()]
     area = sum(areas)
-    uncertainty = area*np.sqrt(sum([tile["uncertainty2"]/areas[i]**2 for i, tile in tiles.items()]))
+    uncertainty = area*np.sqrt(sum([tile["uncertainty2"]/areas[i]**2 if areas[i] != 0 else 0 for i, tile in tiles.items()]))
 
     return area, uncertainty 
 
 
 
 if __name__ == "__main__":
-    area, uncertainty = summarize(["e1.npy","e2.npy"], range(0,3))
+    with open("../mandelbrot/tiles.json","r") as f: 
+        tiles_list = json.load(f)
 
+    area, uncertainty = summarize(["e1.npy","e2.npy"], tiles_list)
+    # print(tiles_list[0])
     print(area, uncertainty)
