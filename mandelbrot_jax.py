@@ -25,8 +25,12 @@ MAX_ITER = 10000
 
 @partial(jit, static_argnames=['max_iter'])
 def mandelbrot(c, max_iter=100):
-    def mandelbrot_step(state, _):
-        z_tortoise, z_hare, c = state
+    def cond_fn(state):
+        z_tortoise, z_hare, iter_count, diverged, converged = state
+        return jnp.logical_and(iter_count < max_iter, jnp.logical_not(diverged | converged))
+
+    def body_fn(state):
+        z_tortoise, z_hare, iter_count, diverged, converged = state
         z_tortoise = z_tortoise * z_tortoise + c
         z_hare = z_hare * z_hare + c
         z_hare = z_hare * z_hare + c  # Hare macht zwei Schritte
@@ -37,17 +41,16 @@ def mandelbrot(c, max_iter=100):
         # Prüfen auf Zyklus (Tortoise-Hare-Vergleich)
         converged = jnp.isclose(z_tortoise, z_hare)
 
-        return (z_tortoise, z_hare, c), (diverged, converged)
+        return z_tortoise, z_hare, iter_count + 1, diverged, converged
 
     z0 = jnp.zeros_like(c)
-    initial_state = (z0, z0, c)
+    initial_state = (z0, z0, 0, False, False)
     
-    # Die Simulation über max_iter Iterationen ausführen
-    (_, _, _), (diverged, converged) = lax.scan(mandelbrot_step, initial_state, None, length=max_iter)
+    final_state = lax.while_loop(cond_fn, body_fn, initial_state)
+    _, _, _, diverged, converged = final_state
     
     # Ein Punkt gehört zur Mandelbrotmenge, wenn er nicht divergiert und nicht konvergiert
-    # Wir müssen sicherstellen, dass die richtigen Bedingungen erfüllt sind
-    return ~(jnp.any(diverged)) | jnp.any(converged)
+    return ~(diverged) | converged
 
 # Funktion zur Zählung von Punkten innerhalb der Mandelbrotmenge
 @partial(jit, static_argnames=["num_samples", "xmin", "width", "ymin", "height", "max_iter"])
