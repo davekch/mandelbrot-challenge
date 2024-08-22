@@ -8,7 +8,7 @@ from jax import random, jit, vmap, lax
 @partial(jit)
 def mandelbrot(c):
     def cond_fn(state):
-        z_tortoise, z_hare, diverged, converged = state
+        _, _, diverged, converged = state
         return  jnp.logical_not(diverged | converged)
 
     def body_fn(state):

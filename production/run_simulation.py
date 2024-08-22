@@ -1,4 +1,4 @@
-from production.mandelbrot_steps import mandelbrot, count_mandelbrot, draw_mandelbrot
+from production.mandelbrot_steps import count_mandelbrot
 
 import argparse
 import jax
@@ -11,7 +11,6 @@ from random import SystemRandom
 from functools import partial
 
 #jax.config.update('jax_platform_name', 'cpu')
-print("Running on:\t", jax.devices())
 
 
 def main():
@@ -94,9 +93,10 @@ def process_tile(random_key, tile_config, num_samples):
     return inside_hits 
 
 @partial(jax.jit, static_argnames=["num_samples"])
-def process_batch(random_keys, tile, num_samples):
-    hits =  jax.vmap(process_tile, in_axes=(0, None, None))(random_keys, tile, num_samples)
-    return hits 
+def process_batch(tile, random_keys, num_samples):
+    proc_tile = partial(process_tile, tile_config=tile, num_samples=num_samples)
+    hits = jax.lax.map(proc_tile, random_keys, batch_size=1000)
+    return hits
 
 def optimized_run(JAX_MOTHER_RNG_KEY, num_batches, tiles, num_samples):
     # Generate all random keys at once
@@ -104,8 +104,8 @@ def optimized_run(JAX_MOTHER_RNG_KEY, num_batches, tiles, num_samples):
 
     # Vectorize over all random keys (batches)
     batch_hits = []
-    for tile in tiles:
-        batch_hits.append(process_batch(random_keys, tile, num_samples))
+    proc_batch =partial(process_batch, random_keys=random_keys, num_samples=num_samples)
+    batch_hits = jax.lax.map(proc_batch, tiles, batch_size=1)
 
     batch_hits = np.array(batch_hits)
     batch_samples = num_samples * np.ones((len(tiles), num_batches))
