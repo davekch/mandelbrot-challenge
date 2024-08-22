@@ -34,7 +34,7 @@ def confidence_interval(confidence_level, numerator, denominator, area):
 
 def summarize(files, tiles_list):
     tiles = {idx:{"total_hits":0, "total_samples":0, "tile_size":0, "uncertainty":0} for idx in range(len(tiles_list))}
-    confidence_level = 0.05
+    confidence_level = 0.32
 
     for fname in files:
         result = np.load(fname)
@@ -43,30 +43,33 @@ def summarize(files, tiles_list):
             idx = int(tile[0])
             tiles[idx]["total_hits"] += tile[1]
             tiles[idx]["total_samples"] += tile[2]
-            print(idx, type(tiles_list[idx]["xmin"]),type(tiles_list[idx]["xmax"]),type(tiles_list[idx]["ymin"]),type(tiles_list[idx]["ymax"]))
+            # print(idx, type(tiles_list[idx]["xmin"]),type(tiles_list[idx]["xmax"]),type(tiles_list[idx]["ymin"]),type(tiles_list[idx]["ymax"]))
             tiles[idx]["tile_size"] = (tiles_list[idx]["xmax"] - tiles_list[idx]["xmin"]) * (tiles_list[idx]["ymax"] - tiles_list[idx]["ymin"])
 
 
+    num_samples = 0
     for k, tile in tiles.items():
         # print(k, tile, tiles_list[idx])
         tile["uncertainty"] = confidence_interval(confidence_level, tile["total_hits"], tile["total_samples"], tile["tile_size"])
-        print(idx, confidence_level, tile["total_hits"], tile["total_samples"], tile["tile_size"])
+        # print(idx, confidence_level, tile["total_hits"], tile["total_samples"], tile["tile_size"])
+        num_samples +=  tile["total_samples"]
+        
+    print(f"{num_samples=}")
 
     areas = [tile["total_hits"]/tile["total_samples"] * tile["tile_size"]  if tile["total_samples"] != 0 else 0 for k, tile in tiles.items()]
     area = sum(areas)
     uncertainty = [(tile["uncertainty"])**2 for i, tile in tiles.items()]
-    # print(uncertainty)
-    uncertainty = area*np.sqrt(sum(uncertainty))
+    uncertainty = np.sqrt(sum(uncertainty))
 
-    return area, uncertainty 
+    return 2*area, 2*uncertainty 
 
 
 
 if __name__ == "__main__":
-    with open("../mandelbrot/tiles.json","r") as f: 
+    with open("tiles.json","r") as f: 
         tiles_list = json.load(f)
 
-    fnames = glob("out/*.npy")
+    fnames = glob("/home/NiclasEich/repos/mandelbrot-challenge/results/*.npy")
     area, uncertainty = summarize(fnames, tiles_list)
     # print(tiles_list[0])
     print(area, uncertainty)
