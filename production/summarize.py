@@ -44,17 +44,18 @@ def summarize(files, tiles_list):
             tiles[idx]["total_hits"] += tile[1]
             tiles[idx]["total_samples"] += tile[2]
             tiles[idx]["tile_size"] = (tiles_list[idx]["xmax"] - tiles_list[idx]["xmin"]) * (tiles_list[idx]["ymax"] - tiles_list[idx]["ymin"])
-            
             # area and uncertainty estimate of tile[idx]
             area_i = tile[1]/tile[2] * tiles[idx]["tile_size"]
             sigma_i = confidence_interval(confidence_level, tile[1], tile[2], tiles[idx]["tile_size"])
-
+            print(idx, tile, tiles[idx]["tile_size"], area_i, sigma_i)
             # squared uncertainty
             tiles[idx]["uncertainty2"] += (sigma_i/area_i)**2
 
     areas = [tile["total_hits"]/tile["total_samples"] * tile["tile_size"]  if tile["total_samples"] != 0 else 0 for k, tile in tiles.items()]
     area = sum(areas)
-    uncertainty = area*np.sqrt(sum([tile["uncertainty2"]/areas[i]**2 if areas[i] != 0 else 0 for i, tile in tiles.items()]))
+    uncertainty = [tile["uncertainty2"]/areas[i]**2 if areas[i] != 0 else 0 for i, tile in tiles.items()]
+    # print(uncertainty)
+    uncertainty = area*np.sqrt(sum(uncertainty))
 
     return area, uncertainty 
 
