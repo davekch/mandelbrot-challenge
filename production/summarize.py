@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import beta
 import json
-
+from glob import glob
 
 
 def confidence_interval(confidence_level, numerator, denominator, area):
@@ -33,7 +33,7 @@ def confidence_interval(confidence_level, numerator, denominator, area):
 
 
 def summarize(files, tiles_list):
-    tiles = {idx:{"total_hits":0, "total_samples":0, "tile_size":None, "uncertainty2":0} for idx in range(len(tiles_list))}
+    tiles = {idx:{"total_hits":0, "total_samples":0, "tile_size":0, "uncertainty":0} for idx in range(len(tiles_list))}
     confidence_level = 0.05
 
     for fname in files:
@@ -43,17 +43,18 @@ def summarize(files, tiles_list):
             idx = int(tile[0])
             tiles[idx]["total_hits"] += tile[1]
             tiles[idx]["total_samples"] += tile[2]
+            print(idx, type(tiles_list[idx]["xmin"]),type(tiles_list[idx]["xmax"]),type(tiles_list[idx]["ymin"]),type(tiles_list[idx]["ymax"]))
             tiles[idx]["tile_size"] = (tiles_list[idx]["xmax"] - tiles_list[idx]["xmin"]) * (tiles_list[idx]["ymax"] - tiles_list[idx]["ymin"])
-            # area and uncertainty estimate of tile[idx]
-            area_i = tile[1]/tile[2] * tiles[idx]["tile_size"]
-            sigma_i = confidence_interval(confidence_level, tile[1], tile[2], tiles[idx]["tile_size"])
-            print(idx, tile, tiles[idx]["tile_size"], area_i, sigma_i)
-            # squared uncertainty
-            tiles[idx]["uncertainty2"] += (sigma_i/area_i)**2
+
+
+    for k, tile in tiles.items():
+        # print(k, tile, tiles_list[idx])
+        tile["uncertainty"] = confidence_interval(confidence_level, tile["total_hits"], tile["total_samples"], tile["tile_size"])
+        print(idx, confidence_level, tile["total_hits"], tile["total_samples"], tile["tile_size"])
 
     areas = [tile["total_hits"]/tile["total_samples"] * tile["tile_size"]  if tile["total_samples"] != 0 else 0 for k, tile in tiles.items()]
     area = sum(areas)
-    uncertainty = [tile["uncertainty2"]/areas[i]**2 if areas[i] != 0 else 0 for i, tile in tiles.items()]
+    uncertainty = [(tile["uncertainty"])**2 for i, tile in tiles.items()]
     # print(uncertainty)
     uncertainty = area*np.sqrt(sum(uncertainty))
 
@@ -65,6 +66,7 @@ if __name__ == "__main__":
     with open("../mandelbrot/tiles.json","r") as f: 
         tiles_list = json.load(f)
 
-    area, uncertainty = summarize(["e1.npy","e2.npy"], tiles_list)
+    fnames = glob("out/*.npy")
+    area, uncertainty = summarize(fnames, tiles_list)
     # print(tiles_list[0])
     print(area, uncertainty)
