@@ -36,7 +36,7 @@ def mandelbrot(c):
 
 
 # Funktion zur Zählung von Punkten innerhalb der Mandelbrotmenge
-@partial(jit, static_argnames=["num_samples", "xmin", "width", "ymin", "height"])
+@partial(jit, static_argnames=["num_samples"])
 def count_mandelbrot(rng, num_samples, xmin, width, ymin, height):
     x_norm = random.uniform(rng, (num_samples,))
     y_norm = random.uniform(rng, (num_samples,))
@@ -51,7 +51,7 @@ def count_mandelbrot(rng, num_samples, xmin, width, ymin, height):
     return jnp.sum(in_set)
 
 # Funktion zum Zeichnen der Mandelbrotmenge unter Verwendung von mandelbrot und count_mandelbrot
-@partial(jit, static_argnames=["num_x", "num_y"])
+@partial(jit, static_argnames=[])
 def draw_mandelbrot(num_x, num_y):
     xmin, xmax = -2, 1
     ymin, ymax = -1.5, 1.5
